@@ -129,6 +129,12 @@ object JsonHook : BaseHook() {
             ?.has("tweetPromotedMetadata") == true || optJSONObject("item")?.optJSONObject("content")
             ?.has("tweetPromotedMetadata") == true
 
+    private fun JSONObject.entryHasYouMightLikeContent(): Boolean =
+        optJSONObject("content")?.optJSONObject("item")?.optJSONObject("content")
+            ?.optJSONObject("tweet")?.optJSONObject("socialContext")?.optJSONObject("generalContext")
+            ?.optString("contextType") == "Sparkle"
+
+
     private fun JSONObject.entryIsWhoToFollow(): Boolean =
         optString("entryId").let {
             it.startsWith("whoToFollow-") || it.startsWith("who-to-follow-") || it.startsWith("connect-module-")
@@ -282,6 +288,21 @@ object JsonHook : BaseHook() {
         }
     }
 
+    private fun JSONArray.entriesRemoveYouMightLike() {
+        val removeIndex = mutableListOf<Int>()
+        forEachIndexed { entryIndex, entry ->
+
+            if ((entry as JSONObject).entryHasYouMightLikeContent()) {
+                Log.d("Handle timeline YouMightLike $entryIndex $entry")
+                removeIndex.add(entryIndex)
+            }
+
+        }
+        for (i in removeIndex.reversed()) {
+            remove(i)
+        }
+    }
+
     private fun JSONArray.entriesRemoveWhoToFollow() {
         val entryRemoveIndex = mutableListOf<Int>()
         forEachIndexed { entryIndex, entry ->
@@ -392,6 +413,7 @@ object JsonHook : BaseHook() {
 
     private fun JSONArray.entriesRemoveAnnoyance() {
         entriesRemoveTimelineAds()
+        entriesRemoveYouMightLike()
         entriesRemoveWhoToFollow()
         entriesRemoveTopicsToFollow()
         entriesRemoveSensitiveMediaWarning()
